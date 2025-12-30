@@ -3,37 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>東京旅誌 - 時間自動排序版</title>
+    <title>東京旅誌 - 極致美化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600&family=Noto+Sans+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
         .timeline-container::before {
             content: ''; position: absolute; left: 27px; top: 0; bottom: 0; width: 2px; background: #f1f5f9; z-index: 0;
         }
-        /* 列表過渡動畫 */
-        .list-move, .list-enter-active, .list-leave-active { transition: all 0.5s ease; }
-        .list-enter-from, .list-leave-to { opacity: 0; transform: translateX(30px); }
-        
-        .drag-handle { cursor: grab; }
-        input[type="time"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
+        /* 隱藏原生時間輸入的圖示，讓畫面更乾淨 */
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto;
+        }
+        .list-move { transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body>
     <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-2xl relative">
         
-        <header class="bg-indigo-950 text-white p-6 pb-4 shrink-0 z-20">
+        <header class="bg-indigo-950 text-white p-6 pb-4 shrink-0 z-20 shadow-lg">
             <div class="flex justify-between items-center mb-4">
                 <h1 class="text-xl font-bold tracking-tight">TOKYO 2025</h1>
-                <button @click="addDay" class="text-xs bg-white/10 px-3 py-1.5 rounded-lg border border-white/20">＋天數</button>
+                <button @click="addDay" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl border border-white/20 active:scale-95 transition">＋天數</button>
             </div>
             <div class="flex gap-3 overflow-x-auto no-scrollbar">
                 <button v-for="(day, index) in itineraryData" :key="index"
                     @click="currentDayIndex = index"
-                    :class="['flex-none w-14 py-2 rounded-xl text-xs font-bold transition-all', 
+                    :class="['flex-none w-14 py-2 rounded-2xl text-xs font-bold transition-all', 
                     currentDayIndex === index ? 'bg-indigo-500 text-white shadow-lg' : 'bg-white/5 text-slate-400']">
                     D{{ index + 1 }}
                 </button>
@@ -41,173 +40,124 @@
         </header>
 
         <main class="flex-grow overflow-y-auto p-4 relative timeline-container bg-slate-50">
-            
-            <transition-group name="list" tag="div" id="sortable-list">
+            <transition-group name="list" tag="div">
                 <div v-for="(item, idx) in sortedItems" :key="item.id" class="relative z-10 mb-6">
                     
-                    <div v-if="idx > 0 && getGap(sortedItems[idx-1], item) !== 0" class="ml-14 -mt-2 mb-4 flex items-center gap-2">
-                        <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm', 
-                            getGap(sortedItems[idx-1], item) < 0 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-white text-indigo-400 border-indigo-50']">
-                            {{ getGap(sortedItems[idx-1], item) < 0 ? '時間重疊!' : '空檔 ' + formatMin(getGap(sortedItems[idx-1], item)) }}
+                    <div v-if="idx > 0" class="ml-14 -mt-2 mb-4 flex items-center gap-2">
+                        <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border', 
+                            getGap(sortedItems[idx-1], item) < 0 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-white text-slate-400 border-slate-100']">
+                            {{ getGap(sortedItems[idx-1], item) < 0 ? '⚠️ 時間重疊' : 'Gap ' + formatMin(getGap(sortedItems[idx-1], item)) }}
                         </span>
                     </div>
 
                     <div class="flex gap-4">
-                        <div class="w-10 pt-2 shrink-0 flex flex-col items-center">
-                            <div class="drag-handle p-1 text-slate-300 hover:text-slate-500"><i data-lucide="grip-vertical" class="w-4 h-4"></i></div>
-                            <div class="w-3 h-3 rounded-full border-2 border-white shadow-sm my-1"
-                                 :class="item.category === 'activity' ? 'bg-indigo-500' : 'bg-orange-400'"></div>
-                            <span class="text-[10px] font-black text-slate-400 mt-1">{{ item.start }}</span>
+                        <div class="w-10 pt-4 shrink-0 flex flex-col items-center">
+                            <div class="w-3 h-3 rounded-full border-2 border-white shadow-sm ring-2"
+                                 :class="item.category === 'activity' ? 'bg-indigo-500 ring-indigo-100' : 'bg-orange-400 ring-orange-100'"></div>
+                            <span class="text-[10px] font-mono text-slate-400 mt-2">{{ item.start }}</span>
                         </div>
 
-                        <div class="flex-grow bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 w-1 h-full" :class="item.category === 'activity' ? 'bg-indigo-500' : 'bg-orange-400'"></div>
+                        <div class="flex-grow bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 relative transition-transform active:scale-[0.98]">
+                            
+                            <div class="flex justify-between items-start mb-3">
+                                <input v-model="item.title" class="font-bold text-slate-800 bg-transparent outline-none w-full text-lg placeholder-slate-200" placeholder="景點名稱...">
+                                <button @click="removeItem(item.id)" class="text-slate-200 hover:text-red-400 transition"><i data-lucide="x-circle" class="w-5 h-5"></i></button>
+                            </div>
 
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex-grow">
-                                    <input v-model="item.title" class="font-bold text-slate-800 bg-transparent outline-none w-full text-base" placeholder="去哪裡？">
-                                    <div class="flex items-center gap-2 mt-1">
-                                        <div class="relative flex items-center gap-1 bg-slate-100 px-2 py-1 rounded text-[10px] font-bold text-slate-600">
-                                            <input type="time" v-model="item.start" class="bg-transparent outline-none">
-                                            <span>-</span>
-                                            <input type="time" v-model="item.end" class="bg-transparent outline-none">
-                                        </div>
-                                        <select v-model="item.category" class="text-[10px] font-bold bg-slate-100 px-2 py-1 rounded outline-none border-none">
-                                            <option value="activity">景點/餐飲</option>
-                                            <option value="transport">交通接駁</option>
-                                        </select>
+                            <div class="flex items-center gap-2">
+                                <div class="relative flex items-center gap-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-2xl group active:bg-indigo-50 transition-colors">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                    <div class="flex flex-col">
+                                        <span class="text-[8px] uppercase text-slate-400 font-black leading-none mb-0.5">Start</span>
+                                        <input type="time" v-model="item.start" class="text-xs font-mono font-bold text-slate-700 bg-transparent outline-none cursor-pointer w-[60px]">
+                                    </div>
+                                    <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
+                                    <div class="flex flex-col">
+                                        <span class="text-[8px] uppercase text-slate-400 font-black leading-none mb-0.5">End</span>
+                                        <input type="time" v-model="item.end" class="text-xs font-mono font-bold text-slate-700 bg-transparent outline-none cursor-pointer w-[60px]">
                                     </div>
                                 </div>
-                                <button @click="removeItem(item.id)" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                
+                                <select v-model="item.category" class="text-[10px] font-bold bg-slate-50 border border-slate-100 px-3 py-3 rounded-2xl outline-none appearance-none text-slate-500">
+                                    <option value="activity">景點</option>
+                                    <option value="transport">交通</option>
+                                </select>
                             </div>
 
-                            <div v-if="item.category === 'transport'" class="mt-3 bg-orange-50 rounded-xl p-3 space-y-2">
-                                <select v-model="item.subType" @change="autoTime(item)" class="text-xs font-bold text-orange-700 bg-white border border-orange-200 rounded px-2 py-1">
-                                    <option value="walk">🚶 徒步</option>
-                                    <option value="taxi">🚕 計程車</option>
-                                    <option value="metro">🚇 地鐵</option>
-                                    <option value="shinkansen">🚄 新幹線</option>
-                                    <option value="flight">✈️ 飛機</option>
-                                </select>
-                                <input v-if="['metro', 'shinkansen'].includes(item.subType)" v-model="item.route" class="text-xs w-full bg-white border border-orange-100 rounded px-2 py-1 outline-none" placeholder="路線名稱...">
-                                <div v-if="item.subType === 'flight'" class="grid grid-cols-2 gap-2">
-                                    <input v-model="item.flightNo" class="text-xs bg-white border border-orange-100 rounded px-2 py-1 outline-none" placeholder="班次">
-                                    <input v-model="item.terminal" class="text-xs bg-white border border-orange-100 rounded px-2 py-1 outline-none" placeholder="航廈">
-                                </div>
+                            <div v-if="item.category === 'transport'" class="mt-3 flex flex-wrap gap-2">
+                                <button v-for="mode in ['walk', 'taxi', 'metro', 'shinkansen']" :key="mode"
+                                    @click="item.subType = mode"
+                                    :class="item.subType === mode ? 'bg-orange-500 text-white' : 'bg-slate-50 text-slate-400'"
+                                    class="text-[10px] px-3 py-1.5 rounded-full font-bold transition">
+                                    {{ mode.toUpperCase() }}
+                                </button>
                             </div>
                             
-                            <textarea v-model="item.details" class="text-xs text-slate-500 bg-transparent w-full mt-2 resize-none outline-none border-t border-slate-50 pt-2" rows="1" placeholder="備註..."></textarea>
+                            <textarea v-model="item.details" class="text-xs text-slate-400 bg-transparent w-full mt-4 resize-none outline-none border-t border-slate-50 pt-3" rows="1" placeholder="Add some notes..."></textarea>
                         </div>
                     </div>
                 </div>
             </transition-group>
-            
             <div class="h-32"></div>
         </main>
 
-        <div class="fixed bottom-24 right-6 flex flex-col gap-3">
-            <button @click="addItem" class="bg-indigo-600 text-white p-4 rounded-full shadow-xl active:scale-95 transition">
-                <i data-lucide="plus"></i>
-            </button>
-        </div>
-
-        <nav class="h-20 border-t bg-white flex justify-around items-center shrink-0 z-40">
-            <button class="text-indigo-600 flex flex-col items-center"><i data-lucide="calendar"></i><span class="text-[10px] mt-1">行程</span></button>
-            <button class="text-slate-300 flex flex-col items-center"><i data-lucide="wallet"></i><span class="text-[10px] mt-1">記帳</span></button>
-            <button class="text-slate-300 flex flex-col items-center"><i data-lucide="settings"></i><span class="text-[10px] mt-1">設定</span></button>
-        </nav>
+        <button @click="addItem" class="fixed bottom-24 right-6 bg-indigo-600 text-white w-14 h-14 rounded-2xl shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-50">
+            <i data-lucide="plus" class="w-8 h-8"></i>
+        </button>
     </div>
 
     <script>
         const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
-
         createApp({
             setup() {
                 const currentDayIndex = ref(0);
                 const itineraryData = ref([{ id: 1, items: [] }]);
 
-                // 核心邏輯：自動排序
                 const sortedItems = computed(() => {
                     const day = itineraryData.value[currentDayIndex.value];
                     if (!day) return [];
-                    // 使用 slice() 複製陣列避免直接修改原始數據導致循環報錯
-                    return day.items.slice().sort((a, b) => {
-                        return timeToMin(a.start) - timeToMin(b.start);
-                    });
+                    return day.items.slice().sort((a, b) => timeToMin(a.start) - timeToMin(b.start));
                 });
 
                 onMounted(() => {
-                    const saved = localStorage.getItem('tokyo_autosort_v1');
+                    const saved = localStorage.getItem('tokyo_beauty_v1');
                     if (saved) itineraryData.value = JSON.parse(saved);
                     lucide.createIcons();
                 });
 
                 watch(itineraryData, () => {
-                    localStorage.setItem('tokyo_autosort_v1', JSON.stringify(itineraryData.value));
+                    localStorage.setItem('tokyo_beauty_v1', JSON.stringify(itineraryData.value));
                     nextTick(() => lucide.createIcons());
                 }, { deep: true });
 
                 const timeToMin = (t) => {
-                    if(!t) return 0;
                     const [h, m] = t.split(':').map(Number);
                     return h * 60 + m;
                 };
 
-                const formatMin = (min) => {
-                    if (min < 60) return `${min}m`;
-                    return `${Math.floor(min/60)}h${min%60}m`;
-                };
-
-                const getGap = (prev, curr) => {
-                    return timeToMin(curr.start) - timeToMin(prev.end);
-                };
+                const formatMin = (min) => min < 60 ? `${min}m` : `${Math.floor(min/60)}h${min%60}m`;
+                const getGap = (prev, curr) => timeToMin(curr.start) - timeToMin(prev.end);
 
                 const addItem = () => {
-                    const lastItem = sortedItems.value[sortedItems.value.length - 1];
-                    let start = '09:00';
-                    let end = '10:00';
-                    
-                    if (lastItem) {
-                        start = lastItem.end;
-                        const [h, m] = start.split(':').map(Number);
-                        end = `${String((h+1)%24).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-                    }
-
+                    const last = sortedItems.value[sortedItems.value.length - 1];
+                    const start = last ? last.end : '09:00';
+                    const end = last ? minToTime(timeToMin(start) + 60) : '10:00';
                     itineraryData.value[currentDayIndex.value].items.push({
-                        id: Date.now() + Math.random(),
-                        title: '',
-                        start, end,
-                        category: 'activity', subType: 'walk',
-                        route: '', flightNo: '', terminal: '', details: ''
+                        id: Date.now(), title: '', start, end, category: 'activity', subType: 'walk', details: ''
                     });
                 };
 
+                const minToTime = (min) => `${String(Math.floor(min/60)%24).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
                 const removeItem = (id) => {
                     const idx = itineraryData.value[currentDayIndex.value].items.findIndex(i => i.id === id);
                     itineraryData.value[currentDayIndex.value].items.splice(idx, 1);
                 };
-
-                const autoTime = (item) => {
-                    const sMin = timeToMin(item.start);
-                    if (item.subType === 'walk') item.end = minToTime(sMin + 15);
-                    if (item.subType === 'taxi') item.end = minToTime(sMin + 10);
-                };
-
-                const minToTime = (min) => {
-                    const h = Math.floor(min / 60) % 24;
-                    const m = min % 60;
-                    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                };
-
                 const addDay = () => {
                     itineraryData.value.push({ id: Date.now(), items: [] });
                     currentDayIndex.value = itineraryData.value.length - 1;
                 };
 
-                return {
-                    currentDayIndex, itineraryData, sortedItems,
-                    addItem, removeItem, addDay, getGap, formatMin, autoTime
-                };
+                return { currentDayIndex, itineraryData, sortedItems, addItem, removeItem, addDay, getGap, formatMin };
             }
         }).mount('#app');
     </script>
