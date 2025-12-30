@@ -12,15 +12,19 @@
         body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
         .time-grid {
             background-image: linear-gradient(#f1f5f9 1px, transparent 1px);
-            background-size: 100% 60px;
+            background-size: 100% 60px; /* 每小時 60px */
         }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
         .modal-enter-from, .modal-leave-to { opacity: 0; }
         
-        /* 文字過長省略 */
-        .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        /* 自定義多行省略 CSS */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -29,7 +33,9 @@
         <header class="bg-indigo-950 text-white p-6 pb-4 shrink-0 shadow-lg">
             <div class="flex justify-between items-center mb-4">
                 <h1 class="text-xl font-bold tracking-tight">TOKYO 2025</h1>
-                <button @click="addDay" class="text-xs bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-lg transition active:scale-95">＋天數</button>
+                <div class="flex gap-2">
+                    <button @click="addDay" class="text-xs bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-lg transition active:scale-95">＋天數</button>
+                </div>
             </div>
             <div class="flex gap-3 overflow-x-auto hide-scrollbar">
                 <button v-for="(day, index) in itineraryData" :key="index"
@@ -50,9 +56,10 @@
                 </div>
 
                 <div class="flex-grow relative time-grid" style="height: 1440px;">
+                    
                     <div v-for="(item, idx) in currentDay.items" :key="idx"
                         :style="getItemStyle(item)"
-                        class="absolute left-2 right-2 rounded-xl border-l-4 shadow-sm p-2 flex flex-col transition-all active:scale-[0.98]"
+                        class="absolute left-2 right-2 rounded-xl border-l-4 shadow-sm p-2 overflow-hidden transition-all bg-white flex flex-col"
                         :class="[
                             item.type === 'activity' ? 'bg-indigo-50/50 border-indigo-500' : 'bg-orange-50/50 border-orange-400',
                             isTimeError(item) ? 'bg-red-50 border-red-500' : ''
@@ -60,28 +67,29 @@
                         
                         <div class="flex justify-between items-center mb-1 shrink-0">
                             <div class="flex items-center gap-1 bg-white/60 px-1.5 rounded text-[9px] font-bold text-slate-500">
-                                <input type="time" v-model="item.start" class="bg-transparent outline-none">
+                                <input type="time" v-model="item.start" class="bg-transparent outline-none focus:text-indigo-600">
                                 <span>-</span>
-                                <input type="time" v-model="item.end" class="bg-transparent outline-none">
+                                <input type="time" v-model="item.end" class="bg-transparent outline-none focus:text-indigo-600">
+                                <span v-if="isTimeError(item)" class="text-red-500">⚠️</span>
                             </div>
-                            <div class="flex gap-1">
-                                <button @click="openMap(item.title)" class="p-1 text-slate-400 hover:text-indigo-600"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i></button>
-                                <button @click="confirmDelete(idx)" class="p-1 text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                            <div class="flex gap-1 shrink-0">
+                                <button @click="openMap(item.title)" class="p-1 text-slate-300 hover:text-indigo-600"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i></button>
+                                <button @click="confirmDelete(idx)" class="p-1 text-slate-300 hover:text-red-500"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
                             </div>
                         </div>
 
-                        <div class="flex-grow overflow-hidden">
-                            <input v-model="item.title" class="font-bold text-sm bg-transparent outline-none w-full placeholder-slate-300 line-clamp-1" placeholder="景點名稱">
+                        <div class="flex-grow flex flex-col min-h-0">
+                            <input v-model="item.title" class="font-bold text-sm bg-transparent outline-none w-full placeholder-slate-300 truncate shrink-0" placeholder="地點/活動名稱">
                             <textarea v-model="item.details" 
-                                class="text-[10px] text-slate-500 bg-transparent outline-none w-full resize-none leading-tight mt-0.5 line-clamp-2" 
-                                :placeholder="item.type === 'transport' ? '班次資訊' : '行程備註'"
+                                class="text-[10px] text-slate-500 bg-transparent outline-none w-full resize-none leading-tight mt-0.5 flex-grow line-clamp-2" 
+                                :placeholder="item.type === 'transport' ? '班次/月台資訊' : '備註內容'"
                                 rows="2"></textarea>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="fixed bottom-24 right-6 flex flex-col gap-3 z-50">
+            <div class="fixed bottom-24 right-6 flex flex-col gap-3 z-40">
                 <button @click="addItem('transport')" class="bg-orange-500 text-white p-3 rounded-full shadow-lg active:scale-90 transition"><i data-lucide="bus"></i></button>
                 <button @click="addItem('activity')" class="bg-indigo-600 text-white p-4 rounded-full shadow-xl active:scale-90 transition"><i data-lucide="plus"></i></button>
             </div>
@@ -90,16 +98,19 @@
         <transition name="modal">
             <div v-if="showDeleteModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
                 <div class="bg-white rounded-3xl p-6 w-72 shadow-2xl text-center">
+                    <div class="w-10 h-10 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </div>
                     <h3 class="text-lg font-bold text-slate-800 mb-2">確定刪除？</h3>
                     <div class="flex gap-3 mt-6">
-                        <button @click="showDeleteModal = false" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-500">取消</button>
-                        <button @click="doDelete" class="flex-1 py-3 rounded-xl bg-red-500 font-bold text-white">刪除</button>
+                        <button @click="showDeleteModal = false" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-500 active:bg-slate-200">取消</button>
+                        <button @click="doDelete" class="flex-1 py-3 rounded-xl bg-red-500 font-bold text-white active:bg-red-600">刪除</button>
                     </div>
                 </div>
             </div>
         </transition>
 
-        <nav class="h-20 border-t bg-white flex justify-around items-center shrink-0">
+        <nav class="h-20 border-t bg-white flex justify-around items-center shrink-0 z-40">
             <button class="text-indigo-600 flex flex-col items-center"><i data-lucide="calendar"></i><span class="text-[10px] mt-1">行程</span></button>
             <button class="text-slate-300 flex flex-col items-center"><i data-lucide="wallet"></i><span class="text-[10px] mt-1">記帳</span></button>
             <button class="text-slate-300 flex flex-col items-center"><i data-lucide="shopping-bag"></i><span class="text-[10px] mt-1">代購</span></button>
@@ -118,8 +129,18 @@
 
                 onMounted(() => {
                     const saved = localStorage.getItem('tokyo_trip_v3');
-                    if (saved) itineraryData.value = JSON.parse(saved);
-                    else itineraryData.value = [{ day: 1, items: [{ type: 'activity', start: '09:00', end: '10:30', title: '點擊編輯', details: '比例優化測試' }] }];
+                    if (saved) {
+                        itineraryData.value = JSON.parse(saved);
+                    } else {
+                        itineraryData.value = [{ 
+                            day: 1, 
+                            items: [
+                                { type: 'activity', start: '09:00', end: '11:00', title: '這是一個2小時的行程', details: '卡片高度會比較高，顯示比例差異。' },
+                                { type: 'transport', start: '11:00', end: '11:30', title: '短程移動', details: '30分鐘的卡片比較矮。' },
+                                { type: 'activity', start: '13:00', end: '18:00', title: '超長行程測試', details: '這個行程有5個小時，但卡片高度會被限制在 200px，多餘的文字內容會被自動省略顯示，保持畫面整潔。' }
+                            ] 
+                        }];
+                    }
                     lucide.createIcons();
                 });
 
@@ -130,18 +151,24 @@
 
                 const currentDay = computed(() => itineraryData.value[currentDayIndex.value]);
 
+                // 核心修改：計算樣式，加入最大高度限制
                 const getItemStyle = (item) => {
                     const startMin = timeToMin(item.start);
                     const endMin = timeToMin(item.end);
                     let duration = endMin - startMin;
-                    if (duration <= 0) duration = 30;
+                    
+                    // 防呆：如果跨夜或時間錯誤，給一個預設長度
+                    if (duration <= 0) duration = 60; 
 
-                    // 1分鐘 = 1px，但限制在 60px 到 200px 之間
+                    // 1. 計算原始高度 (目前比例: 1分鐘 = 1px)
                     const rawHeight = (duration / 60) * 60;
+                    
+                    // 2. 應用限制：最小 60px，最大 200px
+                    // 這樣 1小時(60px) 和 2小時(120px) 有差異，但 5小時也會限制在 200px
                     const finalHeight = Math.min(Math.max(rawHeight, 60), 200);
 
                     return {
-                        top: `${(startMin / 60) * 60}px`,
+                        top: `${Math.max(0, (startMin / 60) * 60)}px`,
                         height: `${finalHeight}px`,
                         zIndex: 10
                     };
@@ -153,8 +180,10 @@
                     return h * 60 + m;
                 };
 
-                const isTimeError = (item) => timeToMin(item.start) >= timeToMin(item.end);
-                
+                const isTimeError = (item) => {
+                    return timeToMin(item.start) >= timeToMin(item.end);
+                };
+
                 const addDay = () => {
                     itineraryData.value.push({ day: itineraryData.value.length + 1, items: [] });
                     currentDayIndex.value = itineraryData.value.length - 1;
@@ -162,15 +191,32 @@
 
                 const addItem = (type) => {
                     let startTime = "09:00";
-                    if (currentDay.value.items.length > 0) startTime = currentDay.value.items[currentDay.value.items.length - 1].end;
+                    if (currentDay.value.items.length > 0) {
+                        startTime = currentDay.value.items[currentDay.value.items.length - 1].end;
+                    }
                     const [h, m] = startTime.split(':').map(Number);
                     const endTime = h < 23 ? `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}` : "23:59";
-                    currentDay.value.items.push({ type, start: startTime, end: endTime, title: '', details: '' });
+                    
+                    currentDay.value.items.push({
+                        type, start: startTime, end: endTime, title: '', details: ''
+                    });
+                    nextTick(() => lucide.createIcons());
                 };
 
-                const confirmDelete = (idx) => { itemToDelete.value = idx; showDeleteModal.value = true; };
-                const doDelete = () => { currentDay.value.items.splice(itemToDelete.value, 1); showDeleteModal.value = false; };
-                const openMap = (loc) => { if(loc) window.open(`https://www.google.com/maps/search/${encodeURIComponent(loc)}`, '_blank'); };
+                const confirmDelete = (idx) => {
+                    itemToDelete.value = idx;
+                    showDeleteModal.value = true;
+                };
+
+                const doDelete = () => {
+                    currentDay.value.items.splice(itemToDelete.value, 1);
+                    showDeleteModal.value = false;
+                };
+
+                const openMap = (loc) => {
+                    if(!loc) return;
+                    window.open(`http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(loc)}`, '_blank');
+                };
 
                 return {
                     currentDayIndex, itineraryData, currentDay, showDeleteModal,
