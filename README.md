@@ -1,1 +1,190 @@
-# JP-Trip
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>東京旅誌 - Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .time-grid {
+            background-image: linear-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 100% 60px; /* 每小時 60px 高度 */
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; }
+    </style>
+</head>
+<body class="bg-slate-100">
+    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-2xl relative">
+        
+        <header class="bg-slate-900 text-white p-6 pb-4 shrink-0">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-xl font-bold tracking-tight">TOKYO 2025</h1>
+                <div class="flex gap-2">
+                    <button @click="addDay" class="text-xs bg-indigo-600 px-3 py-1.5 rounded-lg active:scale-95 transition">＋天數</button>
+                </div>
+            </div>
+            <div class="flex gap-3 overflow-x-auto hide-scrollbar">
+                <button v-for="(day, index) in itineraryData" :key="index"
+                    @click="currentDayIndex = index"
+                    :class="['flex-none w-16 py-2 rounded-xl text-sm font-bold transition', 
+                    currentDayIndex === index ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400']">
+                    D{{ index + 1 }}
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-grow overflow-y-auto relative bg-slate-50" ref="scrollContainer">
+            <div class="flex min-h-full">
+                <div class="w-16 border-r border-slate-200 bg-white shrink-0">
+                    <div v-for="h in 19" :key="h" class="h-[60px] text-[10px] text-slate-400 text-center pt-1 border-b border-slate-50">
+                        {{ String(h + 5).padStart(2, '0') }}:00
+                    </div>
+                </div>
+
+                <div class="flex-grow relative time-grid" style="height: 1140px;"> <div v-for="(item, idx) in currentDay.items" :key="idx"
+                        :style="getItemStyle(item)"
+                        class="absolute left-2 right-2 rounded-xl border-l-4 shadow-sm p-2 overflow-hidden transition-all group"
+                        :class="item.type === 'activity' ? 'bg-white border-indigo-500' : 'bg-orange-50 border-orange-400'">
+                        
+                        <div class="flex justify-between items-start">
+                            <div class="flex flex-col gap-1 min-w-0">
+                                <div class="flex items-center gap-1">
+                                    <input type="time" v-model="item.start" class="text-[10px] font-bold bg-transparent outline-none">
+                                    <span class="text-[10px] text-slate-400">-</span>
+                                    <input type="time" v-model="item.end" class="text-[10px] font-bold bg-transparent outline-none">
+                                </div>
+                                <input v-model="item.title" class="font-bold text-sm bg-transparent outline-none w-full" placeholder="地點/活動">
+                                <input v-if="item.type === 'transport'" v-model="item.details" class="text-[10px] text-orange-600 bg-transparent outline-none" placeholder="班次資訊">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button @click="openMap(item.title)" class="text-slate-300 hover:text-indigo-500"><i data-lucide="map-pin" class="w-4 h-4"></i></button>
+                                <button @click="confirmDelete(idx)" class="text-slate-300 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fixed bottom-24 right-6 flex flex-col gap-3">
+                <button @click="addItem('transport')" class="bg-orange-500 text-white p-3 rounded-full shadow-lg"><i data-lucide="bus"></i></button>
+                <button @click="addItem('activity')" class="bg-indigo-600 text-white p-4 rounded-full shadow-xl shadow-indigo-200"><i data-lucide="plus"></i></button>
+            </div>
+        </main>
+
+        <transition name="modal">
+            <div v-if="showDeleteModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+                <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">確定刪除？</h3>
+                    <p class="text-sm text-slate-500 mb-6">這個行程刪除後無法復原喔！</p>
+                    <div class="flex gap-3">
+                        <button @click="showDeleteModal = false" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-600">取消</button>
+                        <button @click="doDelete" class="flex-1 py-3 rounded-xl bg-red-500 font-bold text-white">刪除</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <nav class="h-20 border-t bg-white flex justify-around items-center shrink-0">
+            <button class="text-indigo-600 flex flex-col items-center"><i data-lucide="calendar"></i><span class="text-[10px]">行程</span></button>
+            <button class="text-slate-300 flex flex-col items-center"><i data-lucide="wallet"></i><span class="text-[10px]">記帳</span></button>
+            <button class="text-slate-300 flex flex-col items-center"><i data-lucide="info"></i><span class="text-[10px]">匯率</span></button>
+        </nav>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                const currentDayIndex = ref(0);
+                const showDeleteModal = ref(false);
+                const itemToDelete = ref(null);
+                
+                // 核心數據結構
+                const itineraryData = ref([
+                    { day: 1, items: [
+                        { type: 'activity', start: '09:00', end: '11:00', title: '成田機場', details: '' },
+                        { type: 'transport', start: '11:00', end: '12:30', title: '京成電鐵 Skyliner', details: '1號月台 / 4車 5A' }
+                    ]}
+                ]);
+
+                // 讀取 LocalStorage
+                onMounted(() => {
+                    const saved = localStorage.getItem('tokyo_trip_data');
+                    if (saved) {
+                        itineraryData.value = JSON.parse(saved);
+                    }
+                    lucide.createIcons();
+                });
+
+                // 自動儲存
+                watch(itineraryData, (newVal) => {
+                    localStorage.setItem('tokyo_trip_data', JSON.stringify(newVal));
+                    nextTick(() => lucide.createIcons());
+                }, { deep: true });
+
+                const currentDay = computed(() => itineraryData.value[currentDayIndex.value]);
+
+                // 計算時間塊位置與高度
+                const getItemStyle = (item) => {
+                    const startMin = timeToMin(item.start) - 360; // 從 06:00 開始算
+                    const duration = timeToMin(item.end) - timeToMin(item.start);
+                    return {
+                        top: `${(startMin / 60) * 60}px`,
+                        height: `${Math.max((duration / 60) * 60, 45)}px`, // 最少給 45px 高度防止太擠
+                        zIndex: 10
+                    };
+                };
+
+                const timeToMin = (t) => {
+                    const [h, m] = t.split(':').map(Number);
+                    return h * 60 + m;
+                };
+
+                const addDay = () => {
+                    itineraryData.value.push({ day: itineraryData.value.length + 1, items: [] });
+                    currentDayIndex.value = itineraryData.value.length - 1;
+                };
+
+                const addItem = (type) => {
+                    const lastItem = currentDay.value.items[currentDay.value.items.length - 1];
+                    const startTime = lastItem ? lastItem.end : "09:00";
+                    const [h, m] = startTime.split(':').map(Number);
+                    const endTime = `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    
+                    currentDay.value.items.push({
+                        type, start: startTime, end: endTime, title: '', details: ''
+                    });
+                };
+
+                const confirmDelete = (idx) => {
+                    itemToDelete.value = idx;
+                    showDeleteModal.value = true;
+                };
+
+                const doDelete = () => {
+                    currentDay.value.items.splice(itemToDelete.value, 1);
+                    showDeleteModal.value = false;
+                    itemToDelete.value = null;
+                };
+
+                const openMap = (loc) => {
+                    if(!loc) return;
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank');
+                };
+
+                return {
+                    currentDayIndex, itineraryData, currentDay, showDeleteModal,
+                    getItemStyle, addDay, addItem, confirmDelete, doDelete, openMap
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
