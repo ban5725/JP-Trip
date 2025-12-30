@@ -3,104 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>東京旅誌 - 手機優化版</title>
+    <title>東京旅誌 - 視覺區隔版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600&family=Noto+Sans+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f1f5f9; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
-        
-        /* 隱藏原生時間輸入的圖示，點擊整個色塊觸發 */
         input[type="time"]::-webkit-calendar-picker-indicator {
             background: transparent; bottom: 0; color: transparent; cursor: pointer; 
             height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto;
         }
-
-        /* 列表平滑交換動畫 */
         .list-move { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-        .list-enter-active, .list-leave-active { transition: all 0.3s ease; }
-        .list-enter-from, .list-leave-to { opacity: 0; transform: scale(0.9); }
     </style>
 </head>
-<body class="bg-slate-50">
-    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-2xl relative">
+<body class="bg-slate-100">
+    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col bg-slate-50 shadow-2xl relative">
         
-        <header class="bg-slate-900 text-white p-6 pb-4 shrink-0 z-20 sticky top-0">
+        <header class="bg-slate-900 text-white p-6 pb-4 shrink-0 z-20 sticky top-0 shadow-lg">
             <div class="flex justify-between items-center mb-4">
-                <h1 class="text-xl font-bold">TOKYO 2025</h1>
-                <button @click="addDay" class="bg-indigo-600 text-[10px] px-3 py-1.5 rounded-lg font-bold">＋天數</button>
+                <h1 class="text-xl font-bold tracking-tight">TOKYO TRIP</h1>
+                <button @click="addDay" class="bg-indigo-600 text-[10px] px-4 py-2 rounded-xl font-black uppercase tracking-wider">New Day</button>
             </div>
-            <div class="flex gap-3 overflow-x-auto no-scrollbar">
+            <div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
                 <button v-for="(day, index) in itineraryData" :key="index"
                     @click="currentDayIndex = index"
-                    :class="['flex-none w-14 py-2 rounded-2xl text-xs font-bold transition-all', 
-                    currentDayIndex === index ? 'bg-indigo-500 text-white shadow-lg' : 'bg-slate-800 text-slate-400']">
+                    :class="['flex-none w-14 py-2.5 rounded-2xl text-xs font-bold transition-all', 
+                    currentDayIndex === index ? 'bg-indigo-500 text-white shadow-lg' : 'bg-slate-800 text-slate-500']">
                     D{{ index + 1 }}
                 </button>
             </div>
         </header>
 
-        <main class="flex-grow p-4 space-y-4">
-            <transition-group name="list" tag="div" class="space-y-4">
-                <div v-for="(item, idx) in sortedItems" :key="item.id" 
-                    class="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 relative overflow-hidden">
-                    
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5" 
-                        :class="item.category === 'activity' ? 'bg-indigo-500' : 'bg-orange-400'"></div>
+        <main class="flex-grow p-4">
+            <transition-group name="list" tag="div" class="space-y-6">
+                <div v-for="(item, idx) in sortedItems" :key="item.id">
 
-                    <div class="flex justify-between items-start gap-3">
-                        <div class="flex flex-col gap-2 shrink-0">
-                            <button @click="moveItem(idx, -1)" :disabled="idx === 0"
-                                class="p-2 rounded-xl bg-slate-50 text-slate-400 active:bg-indigo-50 active:text-indigo-600 disabled:opacity-30">
-                                <i data-lucide="chevron-up" class="w-5 h-5"></i>
-                            </button>
-                            <button @click="moveItem(idx, 1)" :disabled="idx === sortedItems.length - 1"
-                                class="p-2 rounded-xl bg-slate-50 text-slate-400 active:bg-indigo-50 active:text-indigo-600 disabled:opacity-30">
-                                <i data-lucide="chevron-down" class="w-5 h-5"></i>
-                            </button>
+                    <div v-if="item.category === 'activity'" 
+                        class="bg-white rounded-[2.5rem] shadow-sm border border-slate-200/50 p-6 relative transition-all">
+                        <div class="absolute left-6 -top-3 bg-indigo-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-md uppercase tracking-widest">Activity</div>
+                        
+                        <div class="flex justify-between items-start mb-4">
+                            <input v-model="item.title" class="text-xl font-bold text-slate-800 bg-transparent outline-none w-full" placeholder="想去哪裡？">
+                            <div class="flex flex-col gap-1 ml-2">
+                                <button @click="moveItem(idx, -1)" :disabled="idx === 0" class="text-slate-300 disabled:opacity-20"><i data-lucide="chevron-up" class="w-4 h-4"></i></button>
+                                <button @click="moveItem(idx, 1)" :disabled="idx === sortedItems.length - 1" class="text-slate-300 disabled:opacity-20"><i data-lucide="chevron-down" class="w-4 h-4"></i></button>
+                            </div>
                         </div>
 
-                        <div class="flex-grow">
-                            <div class="flex justify-between items-center mb-3">
-                                <input v-model="item.title" class="text-lg font-bold text-slate-800 bg-transparent outline-none w-full" placeholder="行程名稱">
-                                <button @click="removeItem(item.id)" class="text-slate-200 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 mb-4 relative">
+                            <i data-lucide="clock" class="w-4 h-4 text-indigo-500"></i>
+                            <div class="flex items-center gap-2 font-mono font-bold text-sm text-indigo-700">
+                                <div class="relative"><input type="time" v-model="item.start" class="bg-transparent"><span>{{item.start}}</span></div>
+                                <span class="text-slate-300">→</span>
+                                <div class="relative"><input type="time" v-model="item.end" class="bg-transparent"><span>{{item.end}}</span></div>
                             </div>
+                            <button @click="item.category = 'transport'" class="ml-auto text-slate-300 hover:text-orange-500 transition"><i data-lucide="shuffle" class="w-4 h-4"></i></button>
+                        </div>
 
-                            <div class="flex items-center gap-2 mb-4">
-                                <div class="flex-grow flex items-center bg-slate-50 rounded-2xl p-2 border border-slate-100 relative shadow-inner">
-                                    <div class="flex flex-col flex-1 px-2 border-r border-slate-200">
-                                        <span class="text-[8px] font-black text-slate-400 uppercase">Start</span>
-                                        <input type="time" v-model="item.start" class="text-sm font-mono font-bold text-indigo-600 bg-transparent outline-none w-full">
-                                    </div>
-                                    <div class="flex flex-col flex-1 px-2">
-                                        <span class="text-[8px] font-black text-slate-400 uppercase">End</span>
-                                        <input type="time" v-model="item.end" class="text-sm font-mono font-bold text-indigo-600 bg-transparent outline-none w-full">
-                                    </div>
-                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-300 mr-2"></i>
-                                </div>
-                                
-                                <button @click="item.category = item.category === 'activity' ? 'transport' : 'activity'"
-                                    class="p-4 rounded-2xl transition-colors shadow-sm border border-slate-100"
-                                    :class="item.category === 'activity' ? 'bg-indigo-50 text-indigo-500' : 'bg-orange-50 text-orange-500'">
-                                    <i :data-lucide="item.category === 'activity' ? 'map-pin' : 'bus'" class="w-5 h-5"></i>
-                                </button>
-                            </div>
-
-                            <div v-if="item.category === 'transport'" class="flex gap-2 mb-3">
-                                <select v-model="item.subType" class="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded-lg outline-none border-none">
-                                    <option value="walk">徒步</option>
-                                    <option value="metro">地鐵</option>
-                                    <option value="taxi">計程車</option>
-                                    <option value="flight">飛機</option>
-                                </select>
-                                <input v-model="item.route" class="flex-grow text-[10px] bg-slate-50 rounded-lg px-2 outline-none border-none" placeholder="班次或路線...">
-                            </div>
-
-                            <textarea v-model="item.details" class="text-xs text-slate-500 bg-transparent w-full resize-none outline-none" rows="1" placeholder="備註..."></textarea>
+                        <textarea v-model="item.details" class="text-sm text-slate-500 bg-transparent w-full resize-none outline-none border-l-2 border-slate-100 pl-3" rows="2" placeholder="備註、必買、必吃..."></textarea>
+                        
+                        <div class="flex justify-end mt-4">
+                            <button @click="removeItem(item.id)" class="text-red-300 hover:text-red-500 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                         </div>
                     </div>
+
+                    <div v-else 
+                        class="bg-orange-50/50 rounded-3xl border-2 border-dashed border-orange-200 p-5 relative transition-all">
+                        <div class="absolute left-6 -top-3 bg-orange-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-md uppercase tracking-widest">Transfer</div>
+
+                        <div class="flex items-center gap-4">
+                            <div class="bg-orange-500 text-white p-3 rounded-2xl shadow-lg shadow-orange-200">
+                                <i :data-lucide="getTransportIcon(item.subType)" class="w-6 h-6"></i>
+                            </div>
+
+                            <div class="flex-grow">
+                                <div class="flex justify-between">
+                                    <select v-model="item.subType" class="bg-transparent text-sm font-black text-orange-700 outline-none appearance-none">
+                                        <option value="metro">地鐵/JR</option>
+                                        <option value="walk">徒步</option>
+                                        <option value="taxi">計程車</option>
+                                        <option value="flight">航班</option>
+                                    </select>
+                                    <div class="flex gap-2">
+                                        <button @click="moveItem(idx, -1)" :disabled="idx === 0" class="text-orange-300 disabled:opacity-20"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+                                        <button @click="moveItem(idx, 1)" :disabled="idx === sortedItems.length - 1" class="text-orange-300 disabled:opacity-20"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                                <input v-model="item.route" class="text-base font-bold text-orange-900 bg-transparent outline-none w-full border-b border-orange-200/50 pb-1 mt-1" placeholder="填寫班次或路線...">
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex items-center justify-between">
+                            <div class="flex items-center gap-2 font-mono text-xs font-bold text-orange-600 bg-white px-3 py-1.5 rounded-full border border-orange-100 shadow-sm relative">
+                                <div class="relative"><input type="time" v-model="item.start" class="bg-transparent"><span>{{item.start}}</span></div>
+                                <span>-</span>
+                                <div class="relative"><input type="time" v-model="item.end" class="bg-transparent"><span>{{item.end}}</span></div>
+                            </div>
+                            <div class="flex gap-3">
+                                <button @click="item.category = 'activity'" class="text-orange-300 hover:text-indigo-500 transition"><i data-lucide="map-pin" class="w-4 h-4"></i></button>
+                                <button @click="removeItem(item.id)" class="text-orange-300 hover:text-red-500 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </transition-group>
             
@@ -108,15 +115,15 @@
         </main>
 
         <div class="fixed bottom-24 right-6 z-50">
-            <button @click="addItem" class="w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-90 transition-transform">
+            <button @click="addItem" class="w-16 h-16 bg-slate-900 text-white rounded-[2rem] shadow-2xl flex items-center justify-center active:scale-90 transition-transform">
                 <i data-lucide="plus" class="w-8 h-8"></i>
             </button>
         </div>
 
-        <nav class="h-20 border-t bg-white flex justify-around items-center shrink-0 z-40 sticky bottom-0">
+        <nav class="h-20 border-t bg-white/80 backdrop-blur-md flex justify-around items-center shrink-0 z-40 sticky bottom-0">
             <button class="text-indigo-600 flex flex-col items-center"><i data-lucide="calendar"></i><span class="text-[10px] mt-1 font-bold">行程表</span></button>
-            <button class="text-slate-300 flex flex-col items-center"><i data-lucide="wallet"></i><span class="text-[10px] mt-1 font-bold">記帳本</span></button>
-            <button class="text-slate-300 flex flex-col items-center"><i data-lucide="shopping-bag"></i><span class="text-[10px] mt-1 font-bold">代購清單</span></button>
+            <button @click="alert('記帳功能整合中')" class="text-slate-300 flex flex-col items-center"><i data-lucide="wallet"></i><span class="text-[10px] mt-1 font-bold">記帳本</span></button>
+            <button @click="alert('比價功能整合中')" class="text-slate-300 flex flex-col items-center"><i data-lucide="shopping-bag"></i><span class="text-[10px] mt-1 font-bold">代購清單</span></button>
         </nav>
     </div>
 
@@ -127,7 +134,6 @@
                 const currentDayIndex = ref(0);
                 const itineraryData = ref([{ id: 1, items: [] }]);
 
-                // 排序邏輯：按時間自動排序
                 const sortedItems = computed(() => {
                     const day = itineraryData.value[currentDayIndex.value];
                     if (!day) return [];
@@ -135,13 +141,13 @@
                 });
 
                 onMounted(() => {
-                    const saved = localStorage.getItem('tokyo_final_v1');
+                    const saved = localStorage.getItem('tokyo_distinct_v1');
                     if (saved) itineraryData.value = JSON.parse(saved);
                     lucide.createIcons();
                 });
 
                 watch(itineraryData, () => {
-                    localStorage.setItem('tokyo_final_v1', JSON.stringify(itineraryData.value));
+                    localStorage.setItem('tokyo_distinct_v1', JSON.stringify(itineraryData.value));
                     nextTick(() => lucide.createIcons());
                 }, { deep: true });
 
@@ -156,23 +162,19 @@
                     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
                 };
 
-                // 按鍵式移動位置：透過修改時間來達成排序移動
+                const getTransportIcon = (type) => {
+                    const icons = { metro: 'subway', walk: 'footprints', taxi: 'car', flight: 'plane' };
+                    return icons[type] || 'bus';
+                };
+
                 const moveItem = (idx, direction) => {
                     const items = sortedItems.value;
                     const targetIdx = idx + direction;
                     if (targetIdx < 0 || targetIdx >= items.length) return;
-
-                    // 交換兩者的時間，觸發 computed 自動重新排序
-                    const currentItem = items[idx];
-                    const targetItem = items[targetIdx];
-                    
-                    const tempStart = currentItem.start;
-                    const tempEnd = currentItem.end;
-                    
-                    currentItem.start = targetItem.start;
-                    currentItem.end = targetItem.end;
-                    targetItem.start = tempStart;
-                    targetItem.end = tempEnd;
+                    const current = items[idx], target = items[targetIdx];
+                    const tempStart = current.start, tempEnd = current.end;
+                    current.start = target.start; current.end = target.end;
+                    target.start = tempStart; target.end = tempEnd;
                 };
 
                 const addItem = () => {
@@ -180,7 +182,7 @@
                     const start = last ? last.end : '09:00';
                     const end = minToTime(timeToMin(start) + 60);
                     itineraryData.value[currentDayIndex.value].items.push({
-                        id: Date.now(), title: '', start, end, category: 'activity', subType: 'metro', details: ''
+                        id: Date.now(), title: '', start, end, category: 'activity', subType: 'metro', route: '', details: ''
                     });
                 };
 
@@ -194,7 +196,7 @@
                     currentDayIndex.value = itineraryData.value.length - 1;
                 };
 
-                return { currentDayIndex, itineraryData, sortedItems, addItem, removeItem, addDay, moveItem };
+                return { currentDayIndex, itineraryData, sortedItems, addItem, removeItem, addDay, moveItem, getTransportIcon };
             }
         }).mount('#app');
     </script>
